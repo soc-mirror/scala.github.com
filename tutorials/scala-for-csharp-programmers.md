@@ -32,7 +32,7 @@ basics from a C# programmer's point of view.
 ### Classes
 
 The basic concept of classes is the same in Scala as in C#.  A class
-bundles up a bunch of state (member fields) and hides it behind an
+can contain state (member fields) and hides it behind an
 interface (member methods).  The syntax for declaring classes is just
 like C#:
 
@@ -151,7 +151,7 @@ We'll see why this is important in a moment.
 ### Function Types
 
 In C#, you can have variables that refer to functions instead of data.
-These variables have delegate types, such as *Predicate<T>` or
+These variables have delegate types, such as `Predicate<T>` or
 `Func<T, TResult>` or `KeyEventHandler` or `Action<T1, T2>`.
 
 Scala has the same concept, but the function types are built into the
@@ -164,9 +164,9 @@ Effectively, Scala gets rid of all those weird custom delegate types
 like `Predicate<T>` and `Comparer<T>` and has a single family of
 function types like the C# `Func<...>` family.
 
-What if you want to refer to a method that doesn't have a return value?
-In C#, you can't write `Func<T, void>` because void isn't a valid
-type; you have to write `Action<T>` instead.  But Scala doesn't have
+Refering to methods that don't have a return value in C# is not
+possible with `Func<T, void>`, because void isn't a valid type.
+It is necessary to write `Action<T>` instead. Scala doesn't have
 different families of delegate types, it just has the built-in
 function types.  Fortunately, in Scala, `Unit` is a real type, so you
 can write `(Int) => Unit` for a function which takes an integer
@@ -507,9 +507,9 @@ In C#, if you want to create a singleton object, you have to create a class,
 then stop evildoers creating their own instances of that class, then create 
 and provide an instance of that class yourself.
 
-While this is hardly a Burma Railway of the programming craft, it does 
-feel like pushing against the grain of the language. Nor is it great for 
-maintainers, who have to be able to recognise a singleton by its pattern 
+While this is hardly a real-world issue, it does feel like pushing against 
+the grain of the language. Nor is it great for maintainers, who have to be 
+able to recognise a singleton by its pattern 
 (private constructor, public static readonly field, ...), or for clients, 
 who have to use a slightly clumsy multipart syntax to refer to the 
 singleton (e.g. `Universe.Instance`).
@@ -538,15 +538,16 @@ example derive from classes. This is a nice way of creating special values
 with custom behaviour: you don't need to create a whole new type, you just 
 define an instance and override methods in it:
 
-    abstract class Cat {
-      def humiliateSelf()
-    }
-    
-    object Slats extends Cat {
-      def humiliateSelf() { savage(this.tail) }
+    abstract class Planet {
+      def distanceFromEarth: BigInt
     }
 
-Obviously this is a frivolous example, but "special singletons" turn out to 
+    object Earth extends Planet {
+      // We can implement the method with a constant value
+      val distanceFromEarth: BigInt = 0
+    }
+
+Obviously this is a simple example, but "special singletons" turn out to 
 be an important part of the functional idiom, for example for bottoming out 
 recursion. *Scala by Example (PDF)* describes an implementation of a Set class 
 which is implemented as a tree-like structure ("left subset - member - right 
@@ -554,60 +555,84 @@ subset"), and methods such as `contains()` work by recursing down to the
 child sets. For this to work requires an `EmptySet` whose implementation 
 (state) and behaviour are quite different from non-empty sets -- e.g. 
 `contains()` just returns `false` instead of trying to delegate to 
-non-existent child sets. Since `EmptySet` is logically unique it is both 
-simpler and more efficient to represent it as a singleton: i.e. to declare 
-`object EmptySet` instead of `class EmptySet`.
+non-existent child sets. Since `EmptySet` is logically unique and immutable 
+it is both simpler and more efficient to represent it as a singleton: 
+i.e. to declare `object EmptySet` instead of `class EmptySet`.
 
 In fact the whole thing can become alarmingly deep: *Scala by Example* 
 also includes a description of `Boolean` as an `abstract class`, and 
 `True` and `False` as singleton objects which extend `Boolean` and provide 
 appropriate implementations of the `ifThenElse` method. 
 
-And fans of Giuseppe Peano should definitely check out the hypothetical 
-implementation of `Int`...
-
 ### Pass by Name
 
-> You're only on chapter 3 and you're already reduced to writing about 
-> *calling conventions*?  You suck!  Do another post about chimney sweeps 
-> being hunted by jars of marmalade!"
+A parameter passed by name is not evaluated when it is passed to a method.  
+It is evaluated -- and re-evaluated -- when the called method evaluates 
+the parameter; specifically when the called method requests the value of 
+the parameter by mentioning its name. This is the key to being able to 
+define your own control constructs.
 
-Silence, cur.  Pass by name is not as other calling conventions are. 
-Pass by name, especially in conjunction with some other rather 
-theoretical-sounding Scala features, is your gateway to the wonderful 
-world of language extensibility.
+The Java Virtual Machine - on which Scala runs - passes primitives as well 
+as references to objects by value.
+Nonetheless, Scala enables passing arguments to a method by name. 
+(The Scala compiler invisibly "wraps" the argument as an anonymous function.)
 
-#### What is Passing By Name?
+Consider this piece of logging code:
 
-First, let's talk about what we mean by *calling convention*. A calling 
-convention describes how stuff gets passed to a method by its caller. 
-In the good old days, this used to mean exciting things like which 
-arguments got passed in registers and who was responsible for resetting 
-the stack pointer. Sadly, the days of being able to refer to "naked fun 
-calls" are consigned to history: In modern managed environments, the 
-runtime takes care of all this guff and the main distinction is pass 
-data by value or by reference. (The situation on the CLR is slightly 
-complicated by the need to differentiate passing values by value, values 
-by reference, references by value and references by reference, but I'm 
-not going to go into that because (a) it's irrelevant to the subject at 
-hand and (b) that's 
-[Jon Skeet](http://www.yoda.arachsys.com/csharp/parameters.html)'s turf 
-and I don't want him to shank me. Again.)
+    def complicatedComputation = {
+      val result = ... // compute
+      log(isDebugEnabled(), printDebugMessage(result, "DEBUG " + result + ": "))
+    }
 
-In *pass by value*, the called method gets a copy of whatever the caller 
-passed in. Arguments passed by value therefore work like local variables 
-that are initialised before the method runs: when you do anything to them, 
-you're doing it to your own copy.
+    def printDebugMessage(result: Object, message: String) = {
+      ...
+    }
 
-In *pass by reference*, the called method gets a reference to the caller's 
-value.  When you do anything to a pass-by-reference argument, you're doing 
-it to the caller's data. 
+Ideally, the second argument should only be evaluated if the method 
+`isDebugEnabled` evaluates to true.
 
-In *pass by name*, the called method gets... well, it's a bit messy to 
-explain what the called method gets. But when the called method does 
-anything to the argument, the argument gets evaluated and the "anything" 
-is done to that.  Crucially, evaluation happens every time the argument 
-gets mentioned, and only when the argument gets mentioned.
+A naive implementation would compute the second argument eagerly and 
+cause potentially expensive computation of debug output even if
+`condition` evaluated to `false`:
+
+    def log(condition: Boolean, action: Unit) {
+      if(condition) ... // Does not work as intended
+    }
+
+An improved implementation might use a function for the second 
+parameter:
+
+    def log(condition: Boolean, body: () => Unit) {
+      if(condition) body
+    }
+
+The C# implementation looks almost similar:
+
+    public void Log(bool condition, Action body)
+    {
+      if (condition)
+      {
+        body();
+      }
+    }    
+
+Both implementation share the issue that calling the method becomes
+syntactically cumbersome:
+
+    // Scala
+    log(42==42, () => printDebugMessage(...))
+
+    // C#
+    Log(42==42, () => printDebugMessage(...))
+
+Scala provides the possibility to not evaluate arguments eargely while
+preservin a visually pleasing syntax at call site:
+
+    def log(condition: Boolean, body: => Unit) {
+      if(condition) body
+    }
+
+    log(42==42, printDebugMessage(...))
 
 #### Not Just Another Calling Convention
 
@@ -647,6 +672,8 @@ argument at the call site, nor a reference to the argument at the call
 site, but the actual expression that the caller wants it to use to generate 
 a value.
 
+#### Short-Circuit Evaluation
+
 Same goes for short-circuit evaluation. If you want short-circuit 
 evaluation in C#, your only hope if to get on the blower to Anders 
 Hejlsberg and persuade him to bake it into the language:
@@ -684,13 +711,6 @@ and the `IIf` call if a were anything other than 0. Again, what you want is
 for the `condition1`, `condition2`, `ifTrue` and `ifFalse` arguments to be 
 evaluated by the callee if it needs them, not for the caller to evaluate 
 them before making the call.
-
-And that's what *pass by name* does. A parameter passed by name is not 
-evaluated when it is passed to a method.  It is evaluated -- and 
-re-evaluated -- when the called method evaluates the parameter; 
-specifically when the called method requests the value of the parameter by 
-mentioning its name. This might sound weird and academic, but it's the key 
-to being able to define your own control constructs.
 
 #### Using Pass By Name in Scala
 
