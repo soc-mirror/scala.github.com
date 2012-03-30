@@ -567,13 +567,13 @@ appropriate implementations of the `ifThenElse` method.
 ### Pass by Name
 
 A parameter passed by name is not evaluated when it is passed to a method.  
-It is evaluated -- and re-evaluated -- when the called method evaluates 
+It is evaluated -- and re-evaluated -- when the called method uses 
 the parameter; specifically when the called method requests the value of 
 the parameter by mentioning its name. This is the key to being able to 
 define your own control constructs.
 
-The Java Virtual Machine - on which Scala runs - passes primitives as well 
-as references to objects by value.
+The Java Virtual Machine -- on which Scala runs -- passes both, 
+primitives as well references to objects, to methods by value.
 Nonetheless, Scala enables passing arguments to a method by name. 
 (The Scala compiler invisibly "wraps" the argument as an anonymous function.)
 
@@ -595,8 +595,8 @@ A naive implementation would compute the second argument eagerly and
 cause potentially expensive computation of debug output even if
 `condition` evaluated to `false`:
 
-    def log(condition: Boolean, action: Unit) {
-      if(condition) ... // Does not work as intended
+    def log(condition: Boolean, action: Unit) { // action gets executed before log is called
+      if(condition) ...
     }
 
 An improved implementation might use a function for the second 
@@ -616,7 +616,7 @@ The C# implementation looks almost similar:
       }
     }    
 
-Both implementation share the issue that calling the method becomes
+Both implementations share the issue that calling the method becomes
 syntactically cumbersome:
 
     // Scala
@@ -626,7 +626,7 @@ syntactically cumbersome:
     Log(42==42, () => printDebugMessage(...))
 
 Scala provides the possibility to not evaluate arguments eargely while
-preservin a visually pleasing syntax at call site:
+preserving a visually pleasing syntax at the call site:
 
     def log(condition: Boolean, body: => Unit) {
       if(condition) body
